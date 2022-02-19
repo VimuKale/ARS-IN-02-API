@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const mysql = require("mysql");
+const bcrypt = require('bcrypt-nodejs');
 
 const knex = require("knex");
 const { response } = require("express");
@@ -38,55 +39,69 @@ app.post("/login", (req, res) => {
         res.status(404).json("failed to Login");
     }
 });
-//USER REGISTER Andraei//---------------------------------------
+
+
+//USER REGISTER//---------------------------------------
 
 app.post('/userregister', (req, res) => {
-    const { u_id, u_name, u_phno, u_email, u_password, u_addr, u_city, u_state, u_zip } = req.body;
-    db('userdetails')
-        .insert({
-            u_name: u_name,
-            u_phno: u_phno,
-            u_email: u_email,
-            u_addr: u_addr,
-            u_city: u_city,
-            u_state: u_state,
-            u_zip: u_zip
-        })
-        .then(response => {
-            res.json(response);
-        }).catch(err => res.status(400).json('unable to register'))
+    const { u_name, u_phno, u_email, u_password, u_addr, u_city, u_state, u_zip } = req.body;
+    const hash = bcrypt.hashSync(u_password);
+
+    db.transaction(trx => {
+        trx.insert({
+            hash: hash,
+            email: u_email
+        }).into('login')
+            .then(() => {
+                return trx('userdetails').insert({
+                    u_name: u_name,
+                    u_phno: u_phno,
+                    u_email: u_email,
+                    u_addr: u_addr,
+                    u_city: u_city,
+                    u_state: u_state,
+                    u_zip: u_zip
+                }).then(user => {
+                    res.json(user[0])
+                })
+            })
+            .then(trx.commit)
+            .catch(trx.rollback)
+    }).catch(err => res.status(400).json('unable to register'))
+    // db('userdetails')
+    //     .insert({
+    //         u_name: u_name,
+    //         u_phno: u_phno,
+    //         u_email: u_email,
+    //         u_addr: u_addr,
+    //         u_city: u_city,
+    //         u_state: u_state,
+    //         u_zip: u_zip
+    //     })
+    //     .then(response => {
+    //         res.json("user registered successfully");
+    //     }).catch(err => res.status(400).json('unable to register'))
+
+})
+
+app.get('/profile/:id', (req, res) => {
+    const { id } = req.params;
+
+    db.select('*').from('userdetails').where({
+        u_id: id
+    }).then(user => {
+        if (user.length) {
+            res.json(user[0])
+        } else {
+            res.status(400).json('No Such User Found')
+        }
+    }).catch(err => res.status(400).json('Error while retriving User'))
 })
 
 
-//--------------------------------------------------------------
-//USER REGISTER//---------------------------------------
-
-// app.post("/userregister", (req, res) => {
-//     const u_id = req.body.u_id;
-//     const u_name = req.body.u_name;
-//     const u_phno = req.body.u_phno;
-//     const u_email = req.body.u_email;
-//     // const u_password = req.body.u_password;
-//     const u_addr = req.body.u_addr;
-//     const u_city = req.body.u_city;
-//     const u_state = req.body.u_state;
-//     const u_zip = req.body.u_zip;
-//     // const username = req.body.username;
-//     // const password = req.body.password;
-
-//     db.query(
-//         "INSERT INTO userdetails(u_id,u_name,u_phno,u_email,u_addr,u_city,u_state,u_zip) VALUES (?,?,?,?,?,?,?,?)",
-//         [u_id, u_name, u_phno, u_email, u_addr, u_city, u_state, u_zip],
-//         (err, result) => {
-//             console.log(err);
-//             // console.log("working db");
-//         }
-//     );
-// });
-
-//-------------------------------------------------------
 
 
+//LISTENING---------------------------------------------------
 app.listen(3002, () => {
     console.log("ARS-IN-02 API Is Running On Port 3002");
 })
