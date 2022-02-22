@@ -16,10 +16,6 @@ const db = knex({
     }
 });
 
-// db.select('email', 'hash', 'type').from('login').then(data => {
-//     console.log(data);
-// });
-
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -202,7 +198,6 @@ app.post('/supplylisting', (req, res) => {
 
 })
 
-
 app.get('/items', (req, res) => {
     db.select('*').from('shelterdetails')
         .join('items', 'shelterdetails.s_id', 'items.s_id')
@@ -219,12 +214,6 @@ app.get('/items', (req, res) => {
             )
         })
 })
-
-
-
-
-
-
 
 //USER PROFILE------------------------------------------------------------------------------------------------
 app.get('/profile/:id', (req, res) => {
