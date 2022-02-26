@@ -1,10 +1,14 @@
 const express = require("express");
+const bodyParser = require("body-parser");
 const cors = require("cors");
 const mysql = require("mysql");
 const bcrypt = require('bcrypt-nodejs');
+// const { uploadImage } = require("./routes/image")
+const uploadImg = require("./middleware/UploadImage")
+
 
 const knex = require("knex");
-const { response } = require("express");
+// const { response } = require("express");
 
 const db = knex({
     client: 'mysql',
@@ -18,7 +22,12 @@ const db = knex({
 
 const app = express();
 app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }))
 app.use(cors());
+
+app.use("/uploads", express.static("uploads"))
+
+
 
 app.get("/", (req, res) => {
     res.send("this is working");
@@ -164,14 +173,11 @@ app.post('/adminregister', (req, res) => {
 })
 
 
-
+//ADD SUPPLY LISTING
 app.post('/supplylisting', (req, res) => {
-    const { i_id, i_name, i_desc, i_qty, i_cost, s_id, deliver_to, link_to_source, time_frame, status } = req.body;
-
-
+    const { i_name, i_desc, i_qty, i_cost, s_id, deliver_to, link_to_source, time_frame, status } = req.body;
     db('items')
         .insert({
-            i_id: i_id,
             i_name: i_name,
             i_desc: i_desc,
             i_qty: i_qty,
@@ -182,27 +188,19 @@ app.post('/supplylisting', (req, res) => {
             time_frame: time_frame,
             status: status
         }).then(i_record => {
-            res.json({
-                message_type: "success",
-                message: i_record[0]
-            })
+            res.json("success")
         })
         .catch((err) => {
-            console.log(err); res.status(400).json(
-                {
-                    message_type: "fail",
-                    message: "Unable to register supplies"
-                }
-            )
+            console.log(err); res.status(400).json("fail")
         })
-
 })
 
+//GET SUPPLIES ITEMS
 app.get('/items', (req, res) => {
     db.select('*').from('shelterdetails')
         .join('items', 'shelterdetails.s_id', 'items.s_id')
         .then((i_record) => {
-            console.log(i_record[0].i_id);
+            // console.log(i_record[0].i_id);
             res.json(i_record)
         })
         .catch((err) => {
@@ -215,7 +213,148 @@ app.get('/items', (req, res) => {
         })
 })
 
-//USER PROFILE------------------------------------------------------------------------------------------------
+
+// app.post("/image", (req, res) => uploadImage(req, res, db))
+
+//ADD PETS FOR ADOPTION
+app.post("/adoptionimage", uploadImg.single("petImg"), (req, res) => {
+
+    const { p_name, p_type, p_desc, s_id } = req.body;
+    const petfilename = req.file.filename;
+
+    db('adoptionlisting')
+        .insert({
+            p_name: p_name,
+            p_type: p_type,
+            p_desc: p_desc,
+            petfilename: petfilename,
+            s_id: s_id
+
+        }).then(i_record => {
+            res.json({
+                message: "success",
+                message_desc: i_record[0]
+            })
+        })
+        .catch((err) => {
+            console.log(err); res.status(400).json(
+                {
+                    message: "fail",
+                    message_desc: "Adoption Listing Failed"
+                }
+            )
+        })
+})
+
+//GET PETS FOR ADOPTION
+app.get('/pets', (req, res) => {
+    db.select('*').from('shelterdetails')
+        .join('adoptionlisting', 'shelterdetails.s_id', 'adoptionlisting.s_id')
+        .then((i_record) => {
+            // console.log(i_record[0].i_id);
+            res.json(i_record)
+        })
+        .catch((err) => {
+            console.log(err); res.status(400).json(
+                {
+                    message_type: "fail",
+                    message: "Unable to fetch details"
+                }
+            )
+        })
+})
+
+
+app.delete('/deletesupplies', (req, res) => {
+    db('items')
+        .where('i_id', req.body.key)
+        .del()
+        .then((response) => {
+            res.json(response);
+        })
+        .catch((err) => {
+            console.log(err);
+            res.status(400).json(
+                {
+                    message_type: "fail",
+                    message: "Unable to Delete Record"
+                }
+            )
+        })
+})
+
+app.delete('/deleteadoption', (req, res) => {
+    db('adoptionlisting')
+        .where('adop_id', req.body.key)
+        .del()
+        .then((response) => {
+            res.json(response);
+        })
+        .catch((err) => {
+            console.log(err);
+            res.status(400).json(
+                {
+                    message_type: "fail",
+                    message: "Unable to Delete Record"
+                }
+            )
+        })
+})
+
+
+//UPDATE SUPPLY DETAILS
+app.put('/updatesupplies', (req, res) => {
+    const { i_id, i_name, i_desc, i_qty, i_cost, deliver_to, link_to_source, time_frame, status } = req.body;
+    const subQuery = db('items').select('i_id').where({ i_id })
+    subQuery.then(response => {
+        if (response.length > 0) {
+            subQuery.update({
+                i_name: i_name,
+                i_desc: i_desc,
+                i_qty: i_qty,
+                i_cost: i_cost,
+                deliver_to: deliver_to,
+                link_to_source: link_to_source,
+                time_frame: time_frame,
+                status: status
+            })
+                .then(resp => {
+                    res.json('update done')
+                })
+                .catch(err => { res.json('update failed') })
+        }
+        else {
+            res.json('update failed')
+        }
+    })
+        .catch(err => { res.json(err) })
+})
+
+
+//UPDATE ADOPTION DETAILS
+app.put('/updateadoption', (req, res) => {
+    const { adop_id, p_name, p_type, p_desc } = req.body;
+    const subQuery = db('adoptionlisting').select('adop_id').where({ adop_id })
+    subQuery.then(response => {
+        if (response.length > 0) {
+            subQuery.update({
+                p_name: p_name,
+                p_desc: p_desc,
+                p_type: p_type,
+            })
+                .then(resp => {
+                    res.json('update done')
+                })
+                .catch(err => { res.json('update failed') })
+        }
+        else {
+            res.json('update failed')
+        }
+    })
+        .catch(err => { res.json(err) })
+})
+
+//USER PROFILE
 app.get('/profile/:id', (req, res) => {
     const { id } = req.params;
 
@@ -229,10 +368,29 @@ app.get('/profile/:id', (req, res) => {
         }
     }).catch(err => res.status(400).json('Error while retriving User'))
 })
-//--------------------------------------------------------------------------------------
 
-
-//LISTENING---------------------------------------------------
+//LISTENING
 app.listen(3002, () => {
     console.log("ARS-IN-02 API Is Running On Port 3002");
 })
+
+
+// app.get('/shelteritems', (req, res) => {
+//     console.log(req.body.s_id);
+//     db.select('*').from('shelterdetails')
+//         .join('items', 'shelterdetails.s_id', 'items.s_id')
+//         .where('items.s_id', req.body.s_id)
+//         .then((i_record) => {
+//             // console.log(i_record[0].i_id);
+//             res.json(i_record)
+//         })
+//         .catch((err) => {
+//             console.log(err);
+//             res.status(400).json(
+//                 {
+//                     message_type: "fail",
+//                     message: "Unable to fetch details"
+//                 }
+//             )
+//         })
+// })
