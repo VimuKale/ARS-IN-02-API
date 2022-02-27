@@ -104,7 +104,7 @@ app.post('/userregister', (req, res) => {
 
 //SHELTER REGISTER//--------------------------------------------------------------------------------
 app.post('/shelterregister', (req, res) => {
-    const { s_name, s_phno, s_email, s_password, s_addr, s_city, s_state, s_zip } = req.body;
+    const { s_name, s_phno, s_cat, s_email, s_password, s_addr, s_city, s_state, s_zip } = req.body;
     const hash = bcrypt.hashSync(s_password);
 
     db.transaction(trx => {
@@ -117,6 +117,7 @@ app.post('/shelterregister', (req, res) => {
                 return trx('shelterdetails').insert({
                     s_name: s_name,
                     s_phno: s_phno,
+                    s_cat: s_cat,
                     s_email: s_email,
                     s_addr: s_addr,
                     s_city: s_city,
@@ -173,6 +174,138 @@ app.post('/adminregister', (req, res) => {
 })
 
 
+
+//UPDATE USER
+app.put('/updateuser', (req, res) => {
+    const { u_name, u_phno, u_id, u_addr, u_city, u_state, u_zip } = req.body;
+    const subQuery = db('userdetails').select('u_id').where({ u_id })
+    subQuery.then(response => {
+        if (response.length > 0) {
+            subQuery.update({
+                u_name: u_name,
+                u_phno: u_phno,
+                u_addr: u_addr,
+                u_city: u_city,
+                u_state: u_state,
+                u_zip: u_zip,
+            })
+                .then(resp => {
+                    res.json('update done')
+                })
+                .catch(err => { res.json('update failed') })
+        }
+        else {
+            res.json('update failed')
+        }
+    })
+        .catch(err => { res.json(err) })
+})
+
+//UPDATE SHELTER
+app.put('/updateshelter', (req, res) => {
+    const { s_name, s_phno, s_id, s_addr, s_city, s_state, s_zip, s_cat } = req.body;
+    const subQuery = db('shelterdetails').select('s_id').where({ s_id })
+    subQuery.then(response => {
+        if (response.length > 0) {
+            subQuery.update({
+                s_name: s_name,
+                s_phno: s_phno,
+                s_addr: s_addr,
+                s_city: s_city,
+                s_state: s_state,
+                s_zip: s_zip,
+                s_cat: s_cat,
+            })
+                .then(resp => {
+                    res.json('update done')
+                })
+                .catch(err => { res.json('update failed') })
+        }
+        else {
+            res.json('update failed')
+        }
+    })
+        .catch(err => { res.json(err) })
+})
+
+//UPDATE ADMIN
+app.put('/updateadmin', (req, res) => {
+    const { a_name, a_phno, a_id, a_addr, a_city, a_state, a_zip } = req.body;
+    const subQuery = db('admindetails').select('a_id').where({ a_id })
+    subQuery.then(response => {
+        if (response.length > 0) {
+            subQuery.update({
+                a_name: a_name,
+                a_phno: a_phno,
+                a_addr: a_addr,
+                a_city: a_city,
+                a_state: a_state,
+                a_zip: a_zip,
+            })
+                .then(resp => {
+                    res.json('update done')
+                })
+                .catch(err => { res.json('update failed') })
+        }
+        else {
+            res.json('update failed')
+        }
+    })
+        .catch(err => { res.json(err) })
+})
+
+
+
+
+
+
+
+
+
+app.post("/rescueimage", uploadImg.single("petImg"), (req, res) => {
+
+    const { u_id, ra_type, ra_desc, ra_loc, ra_lm, ra_city, ra_zip } = req.body;
+    const petfilename = req.file.filename;
+
+    db('rescuerequest')
+        .insert({
+            u_id: u_id,
+            ra_type: ra_type,
+            ra_desc: ra_desc,
+            ra_loc: ra_loc,
+            ra_lm: ra_lm,
+            ra_city: ra_city,
+            ra_zip: ra_zip,
+            petfilename: petfilename,
+
+        }).then(i_record => {
+            res.json({
+                message: "success",
+                message_desc: i_record[0],
+            })
+        })
+        .catch((err) => {
+            console.log(err); res.status(400).json(
+                {
+                    message: "fail",
+                    message_desc: "Rescue Request Failed"
+                }
+            )
+        })
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
 //ADD SUPPLY LISTING
 app.post('/supplylisting', (req, res) => {
     const { i_name, i_desc, i_qty, i_cost, s_id, deliver_to, link_to_source, time_frame, status } = req.body;
@@ -187,6 +320,22 @@ app.post('/supplylisting', (req, res) => {
             link_to_source: link_to_source,
             time_frame: time_frame,
             status: status
+        }).then(i_record => {
+            res.json("success")
+        })
+        .catch((err) => {
+            console.log(err); res.status(400).json("fail")
+        })
+})
+
+//ACCEPT REQUEST
+app.post('/acceptrequest', (req, res) => {
+    const { s_id, r_id } = req.body;
+    db('rescuestatus')
+        .insert({
+            r_id: r_id,
+            s_id: s_id,
+            status: "Accepted"
         }).then(i_record => {
             res.json("success")
         })
@@ -263,6 +412,86 @@ app.get('/pets', (req, res) => {
             )
         })
 })
+
+app.get('/requests', (req, res) => {
+
+    db.select('*').from('userdetails')
+        .join('rescuerequest', 'userdetails.u_id', 'rescuerequest.u_id')
+        .whereNotExists(db.select('*').from('rescuestatus').whereRaw('rescuerequest.r_id = rescuestatus.r_id'))
+        .then((i_record) => {
+            // console.log(i_record[0].i_id);
+            res.json(i_record)
+        })
+        .catch((err) => {
+            console.log(err); res.status(400).json(
+                {
+                    message_type: "fail",
+                    message: "Unable to fetch details"
+                }
+            )
+        })
+
+
+
+    // db.select('*').from('userdetails')
+    //     .join('rescuerequest', 'userdetails.u_id', 'rescuerequest.u_id')
+    //     .whereNotIn('rescurequest.r_id', 'rescuestatus.r_id')
+    //     .then((i_record) => {
+    //         // console.log(i_record[0].i_id);
+    //         res.json(i_record)
+    //     })
+    //     .catch((err) => {
+    //         console.log(err); res.status(400).json(
+    //             {
+    //                 message_type: "fail",
+    //                 message: "Unable to fetch details"
+    //             }
+    //         )
+    //     })
+})
+
+app.get('/acceptedrequests', (req, res) => {
+
+
+    // db.select('*').from('shelterdetails', 'userdetails')
+    //     .join('rescuestatus', 'shelterdetails.s_id', 'rescuestatus.s_id')
+    //     .join('rescuerequest', 'userdetails.u_id', 'resquerequest.u_id')
+
+    db.select('*').from(db.raw('rescuerequest,userdetails,shelterdetails,rescuestatus'))
+        .then((i_record) => {
+            // console.log(i_record[0].i_id);
+            res.json(i_record)
+        })
+        .catch((err) => {
+            console.log(err); res.status(400).json(
+                {
+                    message_type: "fail",
+                    message: "Unable to fetch details"
+                }
+            )
+        })
+})
+
+
+
+app.delete('/deleterequest', (req, res) => {
+    db('rescuerequest')
+        .where('r_id', req.body.key)
+        .del()
+        .then((response) => {
+            res.json(response);
+        })
+        .catch((err) => {
+            console.log(err);
+            res.status(400).json(
+                {
+                    message_type: "fail",
+                    message: "Unable to Delete Record"
+                }
+            )
+        })
+})
+
 
 
 app.delete('/deletesupplies', (req, res) => {
