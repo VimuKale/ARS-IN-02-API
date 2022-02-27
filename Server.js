@@ -556,6 +556,30 @@ app.put('/updatesupplies', (req, res) => {
 
 
 //UPDATE ADOPTION DETAILS
+app.put('/updatestatus', (req, res) => {
+    const { status_id, status } = req.body;
+    const subQuery = db('rescuestatus').select('status_id').where({ status_id })
+    subQuery.then(response => {
+        if (response.length > 0) {
+            subQuery.update({
+                status: status,
+            })
+                .then(resp => {
+                    res.json('update done')
+                })
+                .catch(err => { res.json('update failed') })
+        }
+        else {
+            res.json('update failed')
+        }
+    })
+        .catch(err => { res.json(err) })
+})
+
+
+
+
+//UPDATE ADOPTION DETAILS
 app.put('/updateadoption', (req, res) => {
     const { adop_id, p_name, p_type, p_desc } = req.body;
     const subQuery = db('adoptionlisting').select('adop_id').where({ adop_id })
