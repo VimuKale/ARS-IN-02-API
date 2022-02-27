@@ -452,14 +452,9 @@ app.get('/requests', (req, res) => {
 
 app.get('/acceptedrequests', (req, res) => {
 
-
-    // db.select('*').from('shelterdetails', 'userdetails')
-    //     .join('rescuestatus', 'shelterdetails.s_id', 'rescuestatus.s_id')
-    //     .join('rescuerequest', 'userdetails.u_id', 'resquerequest.u_id')
-
-    db.select('*').from(db.raw('rescuerequest,userdetails,shelterdetails,rescuestatus'))
+    db.select('*').from(db.raw(`rescuerequest,userdetails,shelterdetails,rescuestatus where rescuestatus.r_id = rescuerequest.r_id And rescuerequest.u_id = userdetails.u_id And rescuestatus.s_id = shelterdetails.s_id And rescuestatus.s_id`))
         .then((i_record) => {
-            // console.log(i_record[0].i_id);
+            console.log(i_record[0].i_id);
             res.json(i_record)
         })
         .catch((err) => {
