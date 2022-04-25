@@ -313,6 +313,15 @@ app.post("/rescueimage", uploadImg.single("petImg"), (req, res) => {
 //ADD SUPPLY LISTING
 app.post('/supplylisting', (req, res) => {
     const { i_name, i_desc, i_qty, i_cost, s_id, deliver_to, link_to_source, time_frame, status } = req.body;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    let mm = today.getMonth()+1;
+    let dd = today.getDate();
+  
+    if(dd < 10) dd = '0' + dd;
+    if(mm < 10) mm = '0' + mm;
+  
+    const date = yyyy+'-'+mm+'-'+dd;
     db('items')
         .insert({
             i_name: i_name,
@@ -323,7 +332,8 @@ app.post('/supplylisting', (req, res) => {
             deliver_to: deliver_to,
             link_to_source: link_to_source,
             time_frame: time_frame,
-            status: status
+            status: status,
+            date:date,
         }).then(i_record => {
             res.json("success")
         })
@@ -375,13 +385,24 @@ app.post("/adoptionimage", uploadImg.single("petImg"), (req, res) => {
     const { p_name, p_type, p_desc, s_id } = req.body;
     const petfilename = req.file.filename;
 
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    let mm = today.getMonth()+1;
+    let dd = today.getDate();
+  
+    if(dd < 10) dd = '0' + dd;
+    if(mm < 10) mm = '0' + mm;
+  
+    const date = yyyy+'-'+mm+'-'+dd;
+
     db('adoptionlisting')
         .insert({
             p_name: p_name,
             p_type: p_type,
             p_desc: p_desc,
             petfilename: petfilename,
-            s_id: s_id
+            s_id: s_id,
+            pet_list_date:date,
 
         }).then(i_record => {
             res.json({
