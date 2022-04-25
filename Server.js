@@ -264,7 +264,7 @@ app.put('/updateadmin', (req, res) => {
 
 app.post("/rescueimage", uploadImg.single("petImg"), (req, res) => {
 
-    const { u_id, ra_type, ra_desc, ra_loc, ra_lm, ra_city, ra_zip } = req.body;
+    const { u_id, ra_type, ra_desc, ra_loc, ra_lm, ra_city, ra_zip, year, month, day, date } = req.body;
     const petfilename = req.file.filename;
 
     db('rescuerequest')
@@ -277,6 +277,10 @@ app.post("/rescueimage", uploadImg.single("petImg"), (req, res) => {
             ra_city: ra_city,
             ra_zip: ra_zip,
             petfilename: petfilename,
+            year: year,
+            month: month,
+            day: day,
+            date: date,
 
         }).then(i_record => {
             res.json({
@@ -563,10 +567,9 @@ app.put('/updatestatus', (req, res) => {
         if (response.length > 0) {
             subQuery.update({
                 status: status,
+            }).then(resp => {
+                res.json('update done')
             })
-                .then(resp => {
-                    res.json('update done')
-                })
                 .catch(err => { res.json('update failed') })
         }
         else {
